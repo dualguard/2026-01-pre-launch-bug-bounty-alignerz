@@ -1,1 +1,0 @@
-forge script script/a26zBase.s.sol:a26zBase --rpc-url base --broadcast --verifier etherscan --etherscan-api-key 8WWM95SRNZP4YUQ95TDBSPWR44RQY2CFIG --verify --account defaultKey --sender 0x2Cfe8373B1fa949A4e176b46bB3f9b5bF08d233e -vvvv
