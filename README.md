@@ -47,9 +47,9 @@ There's a backend that generates the merkleproofs for refunds, TVS allocations i
   
 ### Q: Please provide links to previous audits (if any) and all the known issues or acceptable risks.
 [ShawarmaSec Audit](https://github.com/shawarma-sec/audits/blob/main/final-report-shawarmasec-alignerz.pdf)
+
 Known issues: [Lightchaser](https://gist.github.com/ChaseTheLight01/05252ba91bb7aac661e1ffe30c76f2d5)
-[DualGuard Audit]()
-[DualGuard Mitigation review]()
+
 - Dust amounts are acceptable as long as they do not break the contract
 - It's acceptable to have many users pull together to place one giant bid, bypassing the bidding fees
 - It's acceptable to have one user being allocated the total token allocation reserved for a pool
