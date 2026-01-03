@@ -54,6 +54,8 @@ Known issues: [Lightchaser](https://gist.github.com/ChaseTheLight01/05252ba91bb7
 - It's acceptable to have many users pull together to place one giant bid, bypassing the bidding fees
 - It's acceptable to have one user being allocated the total token allocation reserved for a pool
 - It's acceptable to have huge vesting periods even though it means some tokens might not be claimable by the user in his lifetime
+- Code/doc discrepencies are out of scope for this audit
+
 ### Q: Please list any relevant protocol resources.
 [Whitepaper](https://drive.google.com/file/d/1xN5bYUPd_BkBMtoRruHEO1CBUx0vBiit/)
 
