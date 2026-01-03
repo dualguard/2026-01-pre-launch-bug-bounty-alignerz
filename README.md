@@ -8,6 +8,9 @@
 - Medium: $1k
 - Low: $500
 
+# Contest duration
+Jan 3, 02:00 CET → Jan 7, 14:00 CET
+
 # Q&A
 ### Q: On what chains are the smart contracts going to be deployed?
 Base
@@ -61,6 +64,7 @@ Known issues: [Lightchaser](https://gist.github.com/ChaseTheLight01/05252ba91bb7
 
 ### Q: Extra audit information
 - Merge will not be included for this launch but it will be included in a future upgrade
+- Any vulnerability involving merging is valid, any vulnerability that would come from the removal of the `mergeTVS(...)` and `_merge(...)` functions is also valid
 - realYieldDistributor will not be deployed now, that’s why it wasn’t included in the script
 - The a26zBase.s.sol script should be deployment ready for mainnet
 
