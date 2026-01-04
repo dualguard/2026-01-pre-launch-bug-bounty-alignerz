@@ -50,7 +50,9 @@ There's a backend that generates the merkleproofs for refunds, TVS allocations i
   
 ### Q: Please provide links to previous audits (if any) and all the known issues or acceptable risks.
 [ShawarmaSec Audit](https://github.com/shawarma-sec/audits/blob/main/final-report-shawarmasec-alignerz.pdf)
+
 [Dualguard Mitigation Review](https://github.com/dualguard/2026-01-pre-launch-bug-bounty-alignerz/report-dualguard-alignerz-mitigation-review.pdf)
+
 Known issues: [Lightchaser](https://gist.github.com/ChaseTheLight01/05252ba91bb7aac661e1ffe30c76f2d5)
 
 - Dust amounts are acceptable as long as they do not break the contract
