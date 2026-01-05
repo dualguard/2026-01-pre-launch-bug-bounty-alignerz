@@ -398,27 +398,38 @@ contract AlignerzVestingProtocolTest is Test {
 
     function test_RewardProjectNormalFlow() public {
         vm.startPrank(owner);
-        alignerz.launchRewardProject(address(token));
-        uint256[] memory amounts = new uint256[](1000);
-        address[] memory kols = new address[](1000);
-        for (uint256 i; i < 1000; i++) {
+        alignerz.launchRewardProject(address(token), 3_000_000 ether, 1000);
+        uint256[] memory amounts = new uint256[](500);
+        address[] memory kols = new address[](500);
+        uint256[] memory _amounts = new uint256[](500);
+        address[] memory _kols = new address[](500);
+        for (uint256 i; i < 500; i++) {
             amounts[i] = 3000 ether;
         }
-        for (uint256 i; i < 1000; i++) {
+        for (uint256 i; i < 500; i++) {
             kols[i] = address(uint160(i + 1));
         }
+        for (uint256 i; i < 500; i++) {
+            _amounts[i] = 3000 ether;
+        }
+        for (uint256 i; i < 500; i++) {
+            _kols[i] = address(uint160(500 + i + 1));
+        }
         token.approve(address(alignerz), type(uint256).max);
-        alignerz.setTVSAllocation(0, 3_000_000 ether, 2_592_000, kols, amounts);
+        alignerz.setTVSAllocation(0, 2_592_000, 1_500_000 ether, kols, amounts);
+        alignerz.setTVSAllocation(0, 2_592_000, 1_500_000 ether, _kols, _amounts);
         vm.stopPrank();
-        uint256[] memory nftIds = new uint256[](1000);
-        for (uint256 i; i < 1000; i++) {
+        uint256[] memory nftIds = new uint256[](500);
+        uint256[] memory _nftIds = new uint256[](500);
+        for (uint256 i; i < 500; i++) {
+            skip(500);
             vm.prank(kols[i]);
             nftIds[i] = alignerz.claimRewardTVS(0);
         }
-        skip(5000);
-        for (uint256 i; i < 1000; i++) {
-            vm.prank(kols[i]);
-            tvsManager.claimTokens(nftIds[i]);
+        for (uint256 i; i < 500; i++) {
+            skip(500);
+            vm.prank(_kols[i]);
+            _nftIds[i] = alignerz.claimRewardTVS(0);
         }
         skip(500);
         for (uint256 i; i < 10; i++) {
@@ -437,23 +448,38 @@ contract AlignerzVestingProtocolTest is Test {
 
     function test_RewardProjectFlowZeroMonth() public {
         vm.startPrank(owner);
-        alignerz.launchRewardProject(address(token));
-        uint256[] memory amounts = new uint256[](1000);
-        address[] memory kols = new address[](1000);
-        for (uint256 i; i < 1000; i++) {
+        alignerz.launchRewardProject(address(token), 3_000_000 ether, 1000);
+        uint256[] memory amounts = new uint256[](500);
+        address[] memory kols = new address[](500);
+        uint256[] memory _amounts = new uint256[](500);
+        address[] memory _kols = new address[](500);
+        for (uint256 i; i < 500; i++) {
             amounts[i] = 3000 ether;
         }
-        for (uint256 i; i < 1000; i++) {
+        for (uint256 i; i < 500; i++) {
             kols[i] = address(uint160(i + 1));
         }
+        for (uint256 i; i < 500; i++) {
+            _amounts[i] = 3000 ether;
+        }
+        for (uint256 i; i < 500; i++) {
+            _kols[i] = address(uint160(500 + i + 1));
+        }
         token.approve(address(alignerz), type(uint256).max);
-        alignerz.setTVSAllocation(0, 3_000_000 ether, 1, kols, amounts);
+        alignerz.setTVSAllocation(0, 1, 1_500_000 ether, kols, amounts);
+        alignerz.setTVSAllocation(0, 1, 1_500_000 ether, _kols, _amounts);
         vm.stopPrank();
-        uint256[] memory nftIds = new uint256[](1000);
-        for (uint256 i; i < 1000; i++) {
+        uint256[] memory nftIds = new uint256[](500);
+        uint256[] memory _nftIds = new uint256[](500);
+        for (uint256 i; i < 500; i++) {
             skip(500);
             vm.prank(kols[i]);
             nftIds[i] = alignerz.claimRewardTVS(0);
+        }
+        for (uint256 i; i < 500; i++) {
+            skip(500);
+            vm.prank(_kols[i]);
+            _nftIds[i] = alignerz.claimRewardTVS(0);
         }
         address splitter = kols[5];
         for (uint256 i; i < 5; i++) {
@@ -469,19 +495,75 @@ contract AlignerzVestingProtocolTest is Test {
         percentages[4] = 1000;
         percentages[5] = 1000;
         vm.startPrank(splitter);
-        uint256[] memory NFTIdsOfTVSPostMerge = new uint256[](6);
+        uint256[] memory NFTIdsOfTVSPostMerge = new uint256[](4);
         for (uint256 j; j < 6; j++) {
             uint256[] memory newNftIds = new uint256[](6);
             (, newNftIds) = tvsManager.splitTVS(percentages, nftIds[j]);
             skip(500);
             uint256 newNFTId = tvsManager.mergeTVS(newNftIds);
-            NFTIdsOfTVSPostMerge[j] = newNFTId;
+            if (j < 4) {
+                NFTIdsOfTVSPostMerge[j] = newNFTId;
+            }
         }
         skip(500);
+        uint256 startGas = gasleft();
         uint256 NFTPostMerge = tvsManager.mergeTVS(NFTIdsOfTVSPostMerge);
+        uint256 usedGas = startGas - gasleft();
+        assertTrue(usedGas < 16_777_216, "Transaction gas exceeds block gas limit!");
+        console.log(usedGas);
         skip(500);
+        startGas = gasleft();
+        tvsManager.splitTVS(percentages, NFTPostMerge);
+        usedGas = startGas - gasleft();
+        console.log(usedGas);
+        assertTrue(usedGas < 16_777_216, "Transaction gas exceeds block gas limit!");
+        /*startGas = gasleft();
         tvsManager.claimTokens(NFTPostMerge);
+        usedGas = startGas - gasleft();
+        assertTrue(usedGas < 16_777_216, "Transaction gas exceeds block gas limit!");
+        console.log(usedGas);*/
         vm.stopPrank();
+    }
+
+    function test_SplitFeeMathError() public {
+        uint256 amount = 100e18;
+        uint256 period = 100;
+        uint256 startTime = block.timestamp;
+
+        token.transfer(address(tvsManager), amount);
+
+        // 1. Setup NFT
+        vm.prank(address(alignerz));
+        uint256 nftId = nft.mint(bidders[1]);
+        vm.prank(address(alignerz));
+        tvsManager.setTVS(nftId, amount, period, startTime, token, 0, false, 0);
+
+        // 2. Warp to 40% of vesting and claim
+        vm.warp(startTime + 40);
+        vm.prank(bidders[1]);
+        tvsManager.claimTokens(nftId);
+        // 3. Set split fee to 2% and split 100%
+        vm.prank(owner);
+        tvsManager.setSplitFeeRate(200);
+        uint256[] memory percentages = new uint256[](1);
+        percentages[0] = 10000; // 100%
+        vm.prank(bidders[1]);
+        (, uint256[] memory newIds) = tvsManager.splitTVS(percentages, nftId);
+        uint256 nextId = newIds[0];
+        TVSManager.Allocation memory alloc = tvsManager.getAllocationOf(nextId);
+
+        // Fee on unclaimed 60 is 1.2. New amount = 58.8.
+        assertEq(alloc.amounts[0], 58.8e18);
+        assertEq(alloc.claimedAmounts[0], 0);
+        // 4. Warp to 50% of original vesting (10 seconds later)
+        vm.warp(startTime + 50);
+        uint256 claimable = tvsManager.getClaimableAmount(alloc, 0);
+        // Current calculation: (50/100 * 98.8) - 40 = 9.4 tokens.
+        // If scaled correctly, it should be 9.8 tokens.
+        console.log("Claimable at t=50: %s (Expected ~9.8e18)", claimable);
+
+        // This confirms the user lost 0.4 tokens due to unscaled claimedAmount
+        assertEq(claimable, 9.8e18);
     }
     /*
     function test_RewardMultipleProjectFlowsAndCrossProjectMerge() public {

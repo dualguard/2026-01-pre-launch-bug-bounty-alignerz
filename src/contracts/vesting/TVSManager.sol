@@ -30,7 +30,7 @@ contract TVSManager is Initializable, UUPSUpgradeable, OwnableUpgradeable, Merge
     }
 
     // STATE VARIABLES
-    uint256 public constant MAX_FLOW = 64;
+    uint256 public constant MAX_FLOW = 26;
     address public treasury;
 
     address public alignerz;
@@ -252,7 +252,7 @@ contract TVSManager is Initializable, UUPSUpgradeable, OwnableUpgradeable, Merge
         uint256 nbOfFlows = allocation.amounts.length;
         if (splitFeeRate > 0) {
             (uint256 feeAmount, uint256[] memory newAmounts) =
-                TVSCalculator.calculateFeeAndNewClaimedSecondsForOneTVS(allocation, splitFeeRate);
+                TVSCalculator.calculateFeeAndNewAmountsForOneTVS(allocation, splitFeeRate);
             allocation.amounts = newAmounts;
             _token.safeTransfer(treasury, feeAmount);
         }
@@ -324,20 +324,34 @@ contract TVSManager is Initializable, UUPSUpgradeable, OwnableUpgradeable, Merge
         Allocation memory mergedTVSMemory = mergedTVS;
         if (mergeFeeRate > 0) {
             (uint256 feeAmount, uint256[] memory newAmounts) =
-                TVSCalculator.calculateFeeAndNewClaimedSecondsForOneTVS(mergedTVSMemory, mergeFeeRate);
+                TVSCalculator.calculateFeeAndNewAmountsForOneTVS(mergedTVSMemory, mergeFeeRate);
             mergedTVS.amounts = newAmounts;
             token.safeTransfer(treasury, feeAmount);
         }
-        require(mergedTVSMemory.amounts.length <= MAX_FLOW, Too_Many_Flows());
+        uint256 nbOfFlows = mergedTVSMemory.amounts.length;
+        for (uint256 i; i < nbOfFlows; i++) {
+            if (!mergedTVS.claimedFlows[i]) {
+                mergedTVS.amounts[i] -= mergedTVS.claimedAmounts[i];
+                mergedTVS.claimedAmounts[i] = 0;
+                if (block.timestamp < mergedTVS.vestingPeriods[i] + mergedTVS.vestingStartTimes[i]) {
+                    mergedTVS.vestingPeriods[i] =
+                        mergedTVS.vestingPeriods[i] + mergedTVS.vestingStartTimes[i] - block.timestamp;
+                } else {
+                    mergedTVS.vestingPeriods[i] = 1;
+                }
+                mergedTVS.vestingStartTimes[i] = block.timestamp;
+            }
+        }
+        require(nbOfFlows <= MAX_FLOW, Too_Many_Flows());
         emit TVSsMerged(
             mergedTVSMemory.projectId,
             mergedTVSMemory.isBiddingProject,
             nftIds,
             mergedNftId,
             mergedTVS.amounts,
-            mergedTVSMemory.claimedAmounts,
-            mergedTVSMemory.vestingPeriods,
-            mergedTVSMemory.vestingStartTimes
+            mergedTVS.claimedAmounts,
+            mergedTVS.vestingPeriods,
+            mergedTVS.vestingStartTimes
         );
         return mergedNftId;
     }

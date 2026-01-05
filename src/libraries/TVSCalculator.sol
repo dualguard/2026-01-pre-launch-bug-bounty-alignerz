@@ -16,7 +16,7 @@ library TVSCalculator {
      * @param allocation the TVS allocation
      * @param feeRate fee rate in basis points
      */
-    function calculateFeeAndNewClaimedSecondsForOneTVS(TVSManager.Allocation memory allocation, uint256 feeRate)
+    function calculateFeeAndNewAmountsForOneTVS(TVSManager.Allocation memory allocation, uint256 feeRate)
         internal
         pure
         returns (uint256 feeAmount, uint256[] memory newAmounts)
@@ -43,10 +43,6 @@ library TVSCalculator {
         }
     }
 
-    function ceilDiv(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a == 0 ? 0 : (a - 1) / b + 1;
-    }
-
     /**
      * @notice Computes split arrays for a split operation
      * @param allocation base allocation
@@ -55,7 +51,7 @@ library TVSCalculator {
      */
     function computeSplitArrays(TVSManager.Allocation memory allocation, uint256 percentage, uint256 nbOfFlows)
         internal
-        pure
+        view
         returns (
             uint256[] memory newVestingPeriods,
             uint256[] memory newStartTimes,
@@ -73,19 +69,23 @@ library TVSCalculator {
         uint256[] memory baseAmounts = allocation.amounts;
         uint256[] memory baseClaimedAmounts = allocation.claimedAmounts;
         for (uint256 j; j < nbOfFlows;) {
-            uint256 amount = (baseAmounts[j] * percentage) / BASIS_POINT;
-            require(amount > 0, Splitting_Should_Not_Zero_Down_Amounts());
-            uint256 claimedAmount;
-            if (!allocation.claimedFlows[j]) {
-                claimedAmount = ceilDiv((baseClaimedAmounts[j] * percentage), BASIS_POINT);
-                if (claimedAmount > amount) claimedAmount = amount;
+            if (allocation.claimedFlows[j]) {
+                newAmounts[j] = (baseAmounts[j] * percentage) / BASIS_POINT;
+                newClaimedAmounts[j] = newAmounts[j];
+                newVestingPeriods[j] = allocation.vestingPeriods[j];
+                newStartTimes[j] = allocation.vestingStartTimes[j];
             } else {
-                claimedAmount = amount;
+                newAmounts[j] = ((baseAmounts[j] - baseClaimedAmounts[j]) * percentage) / BASIS_POINT;
+                require(newAmounts[j] > 0, Splitting_Should_Not_Zero_Down_Amounts());
+                newClaimedAmounts[j] = 0;
+                if (block.timestamp < allocation.vestingPeriods[j] + allocation.vestingStartTimes[j]) {
+                    newVestingPeriods[j] =
+                        allocation.vestingPeriods[j] + allocation.vestingStartTimes[j] - block.timestamp;
+                } else {
+                    newVestingPeriods[j] = 1;
+                }
+                newStartTimes[j] = block.timestamp;
             }
-            newAmounts[j] = amount;
-            newClaimedAmounts[j] = claimedAmount;
-            newVestingPeriods[j] = allocation.vestingPeriods[j];
-            newStartTimes[j] = allocation.vestingStartTimes[j];
             newClaimedFlows[j] = allocation.claimedFlows[j];
 
             unchecked {

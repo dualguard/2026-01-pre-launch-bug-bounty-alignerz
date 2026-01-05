@@ -23,6 +23,8 @@ contract Alignerz is Initializable, UUPSUpgradeable, OwnableUpgradeable, Whiteli
     // TYPE DECLARATIONS
     struct RewardProject {
         IERC20 token; // The TVS token
+        uint256 nbOfKOLs; // number of KOLs
+        uint256 totalNbOfKOLs; // total number of KOLs
         uint256 vestingPeriod; // The vesting period is the same for all KOLs
         uint256 startTime; // startTime of the vesting periods
         mapping(address => uint256) kolTVSRewards; // Mapping to track the allocated TVS rewards for each KOL
@@ -224,6 +226,10 @@ contract Alignerz is Initializable, UUPSUpgradeable, OwnableUpgradeable, Whiteli
     /// @param claimDeadline deadline for users to claim their refunds
     event AllPoolAllocationsSet(uint256 projectId, uint256 claimDeadline);
 
+    /// @notice Emitted when all KOLs' allocations are set
+    /// @param projectId ID of the rewardProject
+    event AllKOLsAllocationsSet(uint256 indexed projectId);
+
     // ERRORS
     error Zero_Value();
     error Same_Value();
@@ -240,7 +246,7 @@ contract Alignerz is Initializable, UUPSUpgradeable, OwnableUpgradeable, Whiteli
     error Merkle_Root_Already_Set();
     error Cannot_Exceed_Ten_Pools_Per_Project();
     error Array_Lengths_Must_Match();
-    error Amounts_Do_Not_Add_Up_To_Total_Allocation();
+    error Amounts_Do_Not_Add_Up_To_Batch_Allocation();
     error Deadline_Has_Passed();
     error Deadline_Has_Not_Passed();
     error Caller_Has_No_TVS_Allocation();
@@ -335,12 +341,19 @@ contract Alignerz is Initializable, UUPSUpgradeable, OwnableUpgradeable, Whiteli
     // Reward Projects
     /// @notice Launches a new vesting biddingProject
     /// @param tokenAddress Address of the token to be vested by KOLs
-    function launchRewardProject(address tokenAddress) external onlyOwner {
+    /// @param totalTVSAllocation total amount to be allocated in TVSs to KOLs
+    /// @param _totalNbOfKOLs total number of KOLs for this reward project
+    function launchRewardProject(address tokenAddress, uint256 totalTVSAllocation, uint256 _totalNbOfKOLs)
+        external
+        onlyOwner
+    {
         require(tokenAddress != address(0), Zero_Address());
 
         RewardProject storage rewardProject = rewardProjects[rewardProjectCount];
         rewardProject.startTime = block.timestamp;
+        rewardProject.totalNbOfKOLs = _totalNbOfKOLs;
         rewardProject.token = IERC20(tokenAddress);
+        rewardProject.token.safeTransferFrom(msg.sender, address(this), totalTVSAllocation);
 
         emit RewardProjectLaunched(rewardProjectCount, tokenAddress);
         rewardProjectCount++;
@@ -348,14 +361,14 @@ contract Alignerz is Initializable, UUPSUpgradeable, OwnableUpgradeable, Whiteli
 
     /// @notice Sets KOLs TVS allocations
     /// @param rewardProjectId Id of the rewardProject
-    /// @param totalTVSAllocation total amount to be allocated in TVSs to KOLs
     /// @param vestingPeriod duration the vesting periods
+    /// @param batchTotalAmount Total amount allocated to this batch
     /// @param kolTVS addresses of the KOLs who chose to be rewarded in TVS
     /// @param TVSamounts token amounts allocated for the KOLs who chose to be rewarded in TVS
     function setTVSAllocation(
         uint256 rewardProjectId,
-        uint256 totalTVSAllocation,
         uint256 vestingPeriod,
+        uint256 batchTotalAmount,
         address[] calldata kolTVS,
         uint256[] calldata TVSamounts
     ) external onlyOwner {
@@ -363,18 +376,21 @@ contract Alignerz is Initializable, UUPSUpgradeable, OwnableUpgradeable, Whiteli
         rewardProject.vestingPeriod = vestingPeriod;
         uint256 length = kolTVS.length;
         require(length == TVSamounts.length, Array_Lengths_Must_Match());
-        uint256 totalAmount;
+        uint256 amounts;
         for (uint256 i = 0; i < length; i++) {
             address kol = kolTVS[i];
             rewardProject.kolTVSAddresses.push(kol);
             uint256 amount = TVSamounts[i];
+            amounts += amount;
             rewardProject.kolTVSRewards[kol] = amount;
-            rewardProject.kolTVSIndexOf[kol] = i;
-            totalAmount += amount;
+            rewardProject.kolTVSIndexOf[kol] = rewardProject.nbOfKOLs + i;
             emit TVSAllocated(rewardProjectId, kol, amount, vestingPeriod);
         }
-        require(totalTVSAllocation == totalAmount, Amounts_Do_Not_Add_Up_To_Total_Allocation());
-        rewardProject.token.safeTransferFrom(msg.sender, address(this), totalTVSAllocation);
+        rewardProject.nbOfKOLs += length;
+        require(amounts == batchTotalAmount, Amounts_Do_Not_Add_Up_To_Batch_Allocation());
+        if (rewardProject.nbOfKOLs == rewardProject.totalNbOfKOLs) {
+            emit AllKOLsAllocationsSet(rewardProjectId);
+        }
     }
 
     /// @notice Allows a KOL to claim his TVS
